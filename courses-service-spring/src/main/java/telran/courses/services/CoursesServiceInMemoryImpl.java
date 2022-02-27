@@ -2,7 +2,7 @@ package telran.courses.services;
 
 import java.io.*;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.*;
 import org.slf4j.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -25,29 +25,18 @@ public class CoursesServiceInMemoryImpl implements CoursesService, Serializable 
 	private Map<Integer, Course> courses = new ConcurrentHashMap<>();
 
 	@Override
-	public Course addCourse(Course course) {
+	public synchronized Course addCourse(Course course) {
 		
 		var id = getUniqueId();
 		course.id = id;
-		var res = courses.put(id, course);
-		if (res == null) {
-			LOG.warn("Course with id '{}' already exists", id);
-		} else {
-			LOG.info("Course with id '{}' was added", id);
-		}
-		return res;
+		courses.put(id, course);
+		return course;
 	}
 
 	@Override
 	public Course removeCourse(int id) {
 		
-		var res = courses.remove(id);
-		if (res == null) {
-			LOG.warn("Course with id '{}' doesn't exist", id);
-		} else {
-			LOG.info("Course with id '{}' was removed", id);
-		}
-		return res;
+		return courses.remove(id);
 	}
 
 	@Override
@@ -59,23 +48,13 @@ public class CoursesServiceInMemoryImpl implements CoursesService, Serializable 
 	@Override
 	public Course updateCourse(int id, Course newCourse) {
 		
-		var res = courses.computeIfPresent(id, (k,v) -> newCourse);
-		if (res == null) {
-			LOG.warn("Course with id '{}' doesn't exist", id);
-		}else {
-			LOG.info("Course with id '{}' was updated", id);
-		}
-		return res;
+		return courses.replace(id, newCourse);
 	}
 
 	@Override
 	public Course getCourse(int id) {
 		
-		var res = courses.get(id);
-		if (res == null) {
-			LOG.warn("Course with id '{}' doesn't exist", id);
-		}
-		return res;
+		return courses.get(id);
 	}
 
 	@Override
@@ -87,10 +66,10 @@ public class CoursesServiceInMemoryImpl implements CoursesService, Serializable 
 	@Override
 	public void restore() {
 		
-		try {
-			var ois = new ObjectInputStream(new FileInputStream(fileName));
+		try (var ois = new ObjectInputStream(new FileInputStream(fileName))) {			
 			courses = (Map<Integer, Course>) ois.readObject();
-			ois.close();
+		} catch (FileNotFoundException e) {
+			LOG.info(e.getMessage());
 		} catch (Exception e) {
 			LOG.error(e.getMessage());
 		}
@@ -99,10 +78,8 @@ public class CoursesServiceInMemoryImpl implements CoursesService, Serializable 
 	@Override
 	public void save() {
 		
-		try {
-			var oos = new ObjectOutputStream(new FileOutputStream(fileName));
+		try (var oos = new ObjectOutputStream(new FileOutputStream(fileName))) {
 			oos.writeObject(courses);
-			oos.close();
 		} catch (Exception e) {
 			LOG.error(e.getMessage());
 		}
@@ -110,13 +87,12 @@ public class CoursesServiceInMemoryImpl implements CoursesService, Serializable 
 
 	private int getUniqueId() {
 		
+		var rnd = ThreadLocalRandom.current();
 		var res = 0;
-		while (true) {
-			res = MIN_ID + (int) Math.random() * (MAX_ID - MIN_ID + 1);
-			if (!exists(res)) {
-				break;
-			}
+		do {
+			res = rnd.nextInt(MIN_ID, MAX_ID);
 		}
+		while (exists(res));
 		return res;
 	}
 }
