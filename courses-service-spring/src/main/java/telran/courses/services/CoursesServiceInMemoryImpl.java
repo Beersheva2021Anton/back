@@ -4,9 +4,13 @@ import java.io.*;
 import java.util.*;
 import java.util.concurrent.*;
 import org.slf4j.*;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import telran.courses.api.dto.Course;
+import telran.courses.api.dto.MessagingObj;
+
 import static telran.courses.api.ApiConstants.*;
 
 @Service
@@ -15,14 +19,15 @@ public class CoursesServiceInMemoryImpl implements CoursesService, Serializable 
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = 1L;
-	
+	private static final long serialVersionUID = 1L;	
 	private Logger LOG = LoggerFactory.getLogger(CoursesServiceInMemoryImpl.class);
+	private Map<Integer, Course> courses = new ConcurrentHashMap<>();
 	
 	@Value("${app.courses.fileName: courses.data}")
 	private String fileName;
 	
-	private Map<Integer, Course> courses = new ConcurrentHashMap<>();
+	@Autowired
+	private SimpMessagingTemplate smt;
 
 	@Override
 	public synchronized Course addCourse(Course course) {
@@ -30,13 +35,18 @@ public class CoursesServiceInMemoryImpl implements CoursesService, Serializable 
 		var id = getUniqueId();
 		course.id = id;
 		courses.put(id, course);
+		smt.convertAndSend("/topic/courses", new MessagingObj("added", id));
 		return course;
 	}
 
 	@Override
 	public Course removeCourse(int id) {
 		
-		return courses.remove(id);
+		var res = courses.remove(id);
+		if (res != null) {
+			smt.convertAndSend("/topic/courses", new MessagingObj("removed", id));
+		}		
+		return res;
 	}
 
 	@Override
@@ -48,7 +58,11 @@ public class CoursesServiceInMemoryImpl implements CoursesService, Serializable 
 	@Override
 	public Course updateCourse(int id, Course newCourse) {
 		
-		return courses.replace(id, newCourse);
+		var res = courses.replace(id, newCourse);
+		if (res != null) {
+			smt.convertAndSend("/topic/courses", new MessagingObj("updated", id));
+		}
+		return res;
 	}
 
 	@Override
@@ -60,7 +74,7 @@ public class CoursesServiceInMemoryImpl implements CoursesService, Serializable 
 	@Override
 	public List<Course> getAllCourses() {
 		
-		return (List<Course>) courses.values();
+		return courses.values().stream().toList();
 	}
 
 	@Override
@@ -68,6 +82,7 @@ public class CoursesServiceInMemoryImpl implements CoursesService, Serializable 
 		
 		try (var ois = new ObjectInputStream(new FileInputStream(fileName))) {			
 			courses = (Map<Integer, Course>) ois.readObject();
+			LOG.info("Courses have been restored from file {}", fileName);
 		} catch (FileNotFoundException e) {
 			LOG.info(e.getMessage());
 		} catch (Exception e) {
@@ -80,6 +95,7 @@ public class CoursesServiceInMemoryImpl implements CoursesService, Serializable 
 		
 		try (var oos = new ObjectOutputStream(new FileOutputStream(fileName))) {
 			oos.writeObject(courses);
+			LOG.info("Courses have been saved into file {}", fileName);
 		} catch (Exception e) {
 			LOG.error(e.getMessage());
 		}

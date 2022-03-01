@@ -1,0 +1,6 @@
+logging:
+  level:
+    telran: info
+app:
+  courses:
+    fileName: courses.db
