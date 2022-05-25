@@ -1,3 +1,7 @@
+crud-app-test/.settings
+crud-app-test/target
+crud-app-test/test-output
+
 # Compiled class file
 *.class
 
