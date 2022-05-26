@@ -1,6 +1,8 @@
 package crud.pages;
 
 import java.time.Duration;
+import java.util.List;
+
 import org.openqa.selenium.*;
 import org.openqa.selenium.support.ui.*;
 import crud.models.Product;
@@ -22,42 +24,77 @@ public class ProductBasePage {
 	private By addNewRecordButton = By.id("ctl00_ContentPlaceholder1_RadGrid1_ctl00_ctl02_ctl00_AddNewRecordButton");
 	private By refreshButton = By.id("ctl00_ContentPlaceholder1_RadGrid1_ctl00_ctl02_ctl00_RefreshButton");
 	private By lastPageButton = By.cssSelector("button[class='t-button rgActionButton rgPageLast']");
-	private By recordsCounter = By
-			.xpath("//*[@id=\"ctl00_ContentPlaceholder1_RadGrid1_ctl00\"]/tfoot/tr/td/div/div[5]/strong[1]");
+	private By recordsCounter = By.xpath(
+			"//*[@id=\"ctl00_ContentPlaceholder1_RadGrid1_ctl00\"]/tfoot/tr/td/div/div[5]/strong[1]");
 
-	private By prodNameEdit = By.id("ctl00_ContentPlaceholder1_RadGrid1_ctl00_ctl02_ctl03_TB_ProductName");
-	private By prodQuantityEdit = By.id("ctl00_ContentPlaceholder1_RadGrid1_ctl00_ctl02_ctl03_TB_UnitsInStock");
-	private By prodPriceEdit = By.id("ctl00_ContentPlaceholder1_RadGrid1_ctl00_ctl02_ctl03_TB_UnitPrice");
-	private By insertButton = By.id("ctl00_ContentPlaceholder1_RadGrid1_ctl00_ctl02_ctl03_PerformInsertButton");
+	private By prodNameEdit = By.xpath("//div[@class='rgEditForm']/table/tbody/tr/td/input[@contains(id, '_TB_ProductName')]");
+	private By prodQuantityEdit = By.xpath("//div[@class='rgEditForm']/table/tbody/tr/td/input[@contains(id, '_TB_UnitsInStock')]");
+	private By prodPriceEdit = By.xpath("//div[@class='rgEditForm']/table/tbody/tr/td/input[@contains(id, '_TB_UnitPrice')]");
+	private By insertButton = By.xpath("//button[@class='t-button rgActionButton rgUpdate']");
 
 	private By delConfirmButton = By.xpath("/html/body/main/form/div[1]/div[2]/div/div[2]/button[1]");
+	private By alertConfirmButton = By.xpath("//div[@class='rwDialog rwAlertDialog']/div/button[1]");
+	
+	private By spinner = By.id(
+			"ctl00_ContentPlaceholder1_RadAjaxLoadingPanel1ctl00_ContentPlaceholder1_RadWindowManager1");
 
-	private By spinner = By
-			.id("ctl00_ContentPlaceholder1_RadAjaxLoadingPanel1ctl00_ContentPlaceholder1_RadWindowManager1");
-
+	private By tableRow = By.xpath("//table[@class='rgMasterTable rfdOptionList']/tbody/tr");
+	
 	public int addProduct(Product product) {
 		commonWait.until(ExpectedConditions.elementToBeClickable(addNewRecordButton))
 			.click();
-		fillMainForm(product);
-		return getRecordsCount();
+		fillProductForm(product);
+		return getLastProdId();
 	}
 
-	private void fillMainForm(Product product) {
-		commonWait.until(ExpectedConditions.elementToBeClickable(prodNameEdit))
-			.sendKeys(product.getProdName());
-		commonWait.until(ExpectedConditions.elementToBeClickable(prodQuantityEdit))
-			.sendKeys(product.getQuantity().toString());
-		commonWait.until(ExpectedConditions.elementToBeClickable(prodPriceEdit))
-			.sendKeys(product.getPrice().toString());
+	private void fillProductForm(Product product) {
+		WebElement nameEdit = commonWait.until(ExpectedConditions.elementToBeClickable(prodNameEdit));
+		nameEdit.clear(); // for update
+		nameEdit.sendKeys(product.getProdName());
+		WebElement quantityEdit = commonWait.until(ExpectedConditions.elementToBeClickable(prodQuantityEdit));
+		quantityEdit.clear();
+		quantityEdit.sendKeys(product.getQuantity().toString());
+		WebElement priceEdit = commonWait.until(ExpectedConditions.elementToBeClickable(prodPriceEdit));
+		priceEdit.clear();
+		priceEdit.sendKeys(product.getPrice().toString());
 		commonWait.until(ExpectedConditions.elementToBeClickable(insertButton))
 			.click();
 		waitForTableActive();
+	}	
+
+	public void updateProduct(int prodId, Product product) {
+		toLastPage(); // assumption, that we work with last added products
+		String rowId = getRowIdByProdId(prodId);
+		commonWait.until(ExpectedConditions.elementToBeClickable(By.xpath(
+				"//*[@id='" + rowId + "']/td[1]/button")))
+			.click();
+		fillProductForm(product);
 	}
 
-	private void fillCustomForm(Product product) {
-
+	public void deleteProduct(int prodId) {
+		toLastPage();
+		String rowId = getRowIdByProdId(prodId);
+		commonWait.until(ExpectedConditions.elementToBeClickable(By.xpath(
+				"//*[@id='" + rowId + "']/td[6]/button")))
+			.click();
+		confirmDeletion();
 	}
 
+	public Product getProduct(int prodId) {
+		toLastPage();
+		String rowId = getRowIdByProdId(prodId);
+		String nameStr = commonWait.until(ExpectedConditions.presenceOfElementLocated(By.xpath(
+				"//*[@id='" + rowId + "']/td[3]")))
+			.getText();
+		String quantityStr = commonWait.until(ExpectedConditions.presenceOfElementLocated(By.xpath(
+				"//*[@id='" + rowId + "']/td[4]")))
+			.getText();
+		String priceStr = commonWait.until(ExpectedConditions.presenceOfElementLocated(By.xpath(
+				"//*[@id='" + rowId + "']/td[5]")))
+			.getText();
+		return new Product(nameStr, Integer.parseInt(quantityStr), Double.parseDouble(priceStr));
+	}
+	
 	private void waitForTableActive() {
 		while (true) {
 			try {
@@ -66,18 +103,6 @@ public class ProductBasePage {
 				break;
 			}
 		}
-	}
-
-	public void updateProduct(int prodId, Product product) {
-		
-	}
-
-	public int deleteProduct(int prodId) {
-		return getRecordsCount();
-	}
-
-	public Product getProduct(int prodId) throws IllegalArgumentException {
-		return null;
 	}
 
 	public void toLastPage() {
@@ -92,14 +117,36 @@ public class ProductBasePage {
 		waitForTableActive();
 	}
 	
-	public void closeAlertMessage() {
+	private void confirmDeletion() {
 		commonWait.until(ExpectedConditions.elementToBeClickable(delConfirmButton));
 		waitForTableActive();
+	}
+	
+	public void closeAlertMessage() {
+		commonWait.until(ExpectedConditions.elementToBeClickable(alertConfirmButton));
 	}
 
 	public int getRecordsCount() {
 		String strValue = commonWait.until(ExpectedConditions.visibilityOfElementLocated(recordsCounter))
 			.getText();
 		return Integer.parseInt(strValue);
+	}
+	
+	private int getLastProdId() {
+		toLastPage();
+		List<WebElement> rows = 
+				commonWait.until(ExpectedConditions.presenceOfAllElementsLocatedBy(tableRow));
+		String strValue = 
+				commonWait.until(ExpectedConditions.visibilityOfElementLocated(
+						By.xpath("//*[@id='ctl00_ContentPlaceholder1_RadGrid1_ctl00__" + 
+				+ (rows.size() - 1) + "']/td[2]")))
+				.getText();
+		return Integer.parseInt(strValue);
+	}
+	
+	private String getRowIdByProdId(int prodId) {
+		WebElement cell = commonWait.until(ExpectedConditions.presenceOfElementLocated(By.xpath(
+				"//table[@class='rgMasterTable rfdOptionList']/tbody/tr/td[@value='" + prodId +	"']")));
+		return cell.findElement(By.xpath("./..")).getAttribute("id");
 	}
 }
