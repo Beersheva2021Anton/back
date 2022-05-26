@@ -26,7 +26,8 @@ public class DiagnosticsTests {
 		WebDriverManager.chromedriver().setup();
 		driver = new ChromeDriver();
 		driver.get(appUrl);
-		productBasePage = new ProductBasePage(driver);	
+		productBasePage = new ProductBasePage(driver);
+		productBasePage.acceptCookies();
 	}
 	
 	@Test
