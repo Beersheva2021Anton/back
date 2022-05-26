@@ -1,47 +1,70 @@
 package crud.tests;
 
 import static org.testng.Assert.*;
-import java.time.Duration;
 import org.openqa.selenium.*;
 import org.openqa.selenium.chrome.ChromeDriver;
+import org.slf4j.*;
 import org.testng.annotations.*;
+import crud.models.Product;
 import crud.pages.ProductBasePage;
+import crud.utils.Utilities;
 import io.github.bonigarcia.wdm.WebDriverManager;
 
 public class CrudOperationsTests {
 
-	private WebDriver driver;
-	private ProductBasePage productBasePage;
 	private final String appUrl = 
 			"https://demos.telerik.com/aspnet-ajax/grid/examples/data-editing/manual-crud-operations/defaultcs.aspx";
-	private final static int MAX_LATENCY_SEC = 10;
 	
-	@BeforeSuite
+	private WebDriver driver;
+	private ProductBasePage productBasePage;	
+	private Logger LOG = LoggerFactory.getLogger(CrudOperationsTests.class);
+	
+	@BeforeTest
 	public void setUp() {
 		WebDriverManager.chromedriver().setup();
 		driver = new ChromeDriver();
-		driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(MAX_LATENCY_SEC));
 		driver.get(appUrl);
-		driver.findElement(By.linkText("Manual CRUD Operations"));
-		productBasePage = new ProductBasePage(driver);
+		productBasePage = new ProductBasePage(driver);		
 	}
 	
 	@Test
 	public void addProductTest() {
-		// TODO
+		int recCount1 = productBasePage.getRecordsCount();
+		Product product = Utilities.getRandomProduct();		
+		LOG.info("Add product {}", product);
+		int recCount2 = productBasePage.addProduct(product);
+		
+		assertEquals(recCount2, recCount1 + 1);
+		productBasePage.refreshPage(); // to check product saved in DB (not only in UI)
+		assertEquals(recCount2, recCount1 + 1);
 	}
 	
 	@Test
 	public void updateProductTest() {
-		// TODO
+		int recCount = productBasePage.getRecordsCount();
+		Product newProduct = Utilities.getRandomProduct();
+		LOG.info("Update product {}", newProduct);
+		productBasePage.updateProduct(recCount, newProduct);
+		
+		Product actualProduct = productBasePage.getProduct(recCount);
+		assertEquals(actualProduct, newProduct);
+		productBasePage.refreshPage();
+		actualProduct = productBasePage.getProduct(recCount);
+		assertEquals(actualProduct, newProduct);
 	}
 	
 	@Test
 	public void deleteProductTest() {
-		// TODO
+		int recCount1 = productBasePage.getRecordsCount();		
+		LOG.info("Delete product");
+		int recCount2 = productBasePage.deleteProduct(recCount1);
+		
+		assertEquals(recCount2, recCount1 - 1);
+		productBasePage.refreshPage();
+		assertEquals(recCount2, recCount1 - 1);
 	}
 	
-	@AfterSuite
+	@AfterTest
 	public void tearDown() {
 		driver.quit();
 	}
