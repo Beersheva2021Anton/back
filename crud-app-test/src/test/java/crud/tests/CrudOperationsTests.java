@@ -2,31 +2,26 @@ package crud.tests;
 
 import static org.testng.Assert.*;
 import org.openqa.selenium.*;
-import org.openqa.selenium.chrome.ChromeDriver;
 import org.slf4j.*;
 import org.testng.annotations.*;
+import crud.configuration.AppConfig;
 import crud.models.Product;
 import crud.pages.ProductBasePage;
 import crud.utils.Utilities;
-import io.github.bonigarcia.wdm.WebDriverManager;
 
 public class CrudOperationsTests {
 
-	private final String appUrl = 
-			"https://demos.telerik.com/aspnet-ajax/grid/examples/data-editing/manual-crud-operations/defaultcs.aspx";
-	
 	private WebDriver driver;
 	private ProductBasePage productBasePage;	
 	private Logger LOG = LoggerFactory.getLogger(CrudOperationsTests.class);
 	
 	@BeforeMethod
 	public void setUp() {
-		WebDriverManager.chromedriver().setup();
-		driver = new ChromeDriver();
+		AppConfig config = AppConfig.getConfiguration();
+		driver = config.webDriver();
 		driver.manage().window().maximize();
-		driver.get(appUrl);
+		driver.get(config.appUrl());
 		productBasePage = new ProductBasePage(driver);
-		productBasePage.acceptCookies();
 	}
 	
 	@Test

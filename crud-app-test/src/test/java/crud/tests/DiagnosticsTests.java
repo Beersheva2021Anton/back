@@ -2,20 +2,14 @@ package crud.tests;
 
 import static org.testng.Assert.*;
 import org.openqa.selenium.*;
-import org.openqa.selenium.chrome.ChromeDriver;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.slf4j.*;
 import org.testng.annotations.*;
-
+import crud.configuration.AppConfig;
 import crud.models.Product;
 import crud.pages.ProductBasePage;
 import crud.utils.Utilities;
-import io.github.bonigarcia.wdm.WebDriverManager;
 
 public class DiagnosticsTests {
-
-	private final String appUrl = 
-			"https://demos.telerik.com/aspnet-ajax/grid/examples/data-editing/manual-crud-operations/defaultcs.aspx";
 	
 	private WebDriver driver;
 	private ProductBasePage productBasePage;	
@@ -23,12 +17,11 @@ public class DiagnosticsTests {
 	
 	@BeforeMethod
 	public void setUp() {
-		WebDriverManager.chromedriver().setup();
-		driver = new ChromeDriver();
+		AppConfig config = AppConfig.getConfiguration();
+		driver = config.webDriver();
 		driver.manage().window().maximize();
-		driver.get(appUrl);
+		driver.get(config.appUrl());
 		productBasePage = new ProductBasePage(driver);
-		productBasePage.acceptCookies();
 	}
 	
 	@Test
@@ -76,9 +69,9 @@ public class DiagnosticsTests {
 		Product oldProduct = productBasePage.getProduct(prodId);
 		productBasePage.updateProduct(prodId, newProduct);
 		
-		productBasePage.closeAlertMessage();
+		productBasePage.closeAlertMessage(); // alert is always expected
 		Product actualProduct = productBasePage.getProduct(prodId);
-		assertEquals(actualProduct, oldProduct);
+		assertEquals(actualProduct, oldProduct); // check data not changed after alert
 	}
 	
 	private int addRandomProduct() {

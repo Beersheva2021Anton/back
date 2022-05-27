@@ -20,7 +20,6 @@ public class ProductBasePage {
 				.pollingEvery(Duration.ofMillis(POLLING_MILLIS));
 	}
 
-	private By acceptCookiesButton = By.xpath("//*[@id='onetrust-accept-btn-handler']");
 	private By addNewRecordButton = By.id("ctl00_ContentPlaceholder1_RadGrid1_ctl00_ctl02_ctl00_AddNewRecordButton");
 	private By refreshButton = By.id("ctl00_ContentPlaceholder1_RadGrid1_ctl00_ctl02_ctl00_RefreshButton");
 	private By lastPageButton = By.cssSelector("button[class='t-button rgActionButton rgPageLast']");
@@ -38,30 +37,18 @@ public class ProductBasePage {
 			"ctl00_ContentPlaceholder1_RadAjaxLoadingPanel1ctl00_ContentPlaceholder1_RadWindowManager1");
 
 	private By tableRow = By.xpath("//table[@class='rgMasterTable rfdOptionList']/tbody/tr");
-	private By hideNinjaButton = By.id("collapse-btn");
-	
-	public void acceptCookies() {
-		while (true) {
-			try {
-				commonWait.until(ExpectedConditions.visibilityOfElementLocated(acceptCookiesButton))
-					.click();
-				break;
-			} catch(ElementClickInterceptedException e) {
-				// do nothing
-			}
-		}		
-	}
-	
+		
 	public int addProduct(Product product) {
-		commonWait.until(ExpectedConditions.elementToBeClickable(addNewRecordButton))
-			.click();
+		WebElement addBtn = 
+				commonWait.until(ExpectedConditions.elementToBeClickable(addNewRecordButton));
+		clickOnElement(addBtn);
 		fillProductForm(product);
 		return getLastProdId();
 	}
 
 	private void fillProductForm(Product product) {
 		WebElement nameEdit = commonWait.until(ExpectedConditions.elementToBeClickable(prodNameEdit));
-		nameEdit.clear(); // for update
+		nameEdit.clear(); // clear is for update
 		nameEdit.sendKeys(product.getProdName());
 		WebElement quantityEdit = commonWait.until(ExpectedConditions.elementToBeClickable(prodQuantityEdit));
 		quantityEdit.clear();
@@ -72,28 +59,28 @@ public class ProductBasePage {
 		priceEdit.clear();
 		if (product.getPrice() != null) {
 			priceEdit.sendKeys(product.getPrice().toString());
-		}		
-		commonWait.until(ExpectedConditions.elementToBeClickable(insertButton))
-			.click();
+		}	
+		WebElement insertBtn = 
+				commonWait.until(ExpectedConditions.elementToBeClickable(insertButton));
+		clickOnElement(insertBtn);
 		waitForTableActive();
 	}	
 
 	public void updateProduct(int prodId, Product product) {
 		toLastPage(); // assumption, that we work with last added products
 		String rowId = getRowIdByProdId(prodId);
-		commonWait.until(ExpectedConditions.elementToBeClickable(By.xpath(
-				"//*[@id='" + rowId + "']/td[1]/button")))
-			.click();
+		WebElement editBtn = commonWait.until(ExpectedConditions.elementToBeClickable(By.xpath(
+				"//*[@id='" + rowId + "']/td[1]/button")));
+		clickOnElement(editBtn);
 		fillProductForm(product);
 	}
 
 	public void deleteProduct(int prodId) {
 		toLastPage();
 		String rowId = getRowIdByProdId(prodId);
-		hideNinjaBanner();
-		commonWait.until(ExpectedConditions.elementToBeClickable(By.xpath(
-				"//*[@id='" + rowId + "']/td[6]/button")))
-			.click();
+		WebElement delBtn = commonWait.until(ExpectedConditions.elementToBeClickable(By.xpath(
+				"//*[@id='" + rowId + "']/td[6]/button")));
+		clickOnElement(delBtn);
 		confirmDeletion();
 	}
 
@@ -123,29 +110,35 @@ public class ProductBasePage {
 	}
 
 	public void toLastPage() {
-		commonWait.until(ExpectedConditions.elementToBeClickable(lastPageButton))
-			.click();
+		WebElement lastPageBtn = 
+				commonWait.until(ExpectedConditions.elementToBeClickable(lastPageButton));
+		clickOnElement(lastPageBtn);
 		waitForTableActive();
 	}
 
 	public void refreshPage() {
-		hideNinjaBanner();	
-		commonWait.until(ExpectedConditions.elementToBeClickable(refreshButton))
-			.click();
+		WebElement refreshBtn = 
+				commonWait.until(ExpectedConditions.elementToBeClickable(refreshButton));
+		clickOnElement(refreshBtn);
 		waitForTableActive();
 	}
 	
+	private void clickOnElement(WebElement element) {
+		JavascriptExecutor js = (JavascriptExecutor)driver; 
+	    js.executeScript("arguments[0].click();", element); // to avoid cookies and ninja banners
+	}
+	
 	private void confirmDeletion() {
-		hideNinjaBanner();
-		commonWait.until(ExpectedConditions.elementToBeClickable(delConfirmButton))
-			.click();
+		WebElement confirmBtn = 
+				commonWait.until(ExpectedConditions.elementToBeClickable(delConfirmButton));
+		clickOnElement(confirmBtn);
 		waitForTableActive();
 	}
 	
 	public void closeAlertMessage() {
-		hideNinjaBanner();
-		commonWait.until(ExpectedConditions.elementToBeClickable(alertConfirmButton))
-			.click();
+		WebElement confirnBtn = 
+				commonWait.until(ExpectedConditions.elementToBeClickable(alertConfirmButton));
+		clickOnElement(confirnBtn);
 	}
 
 	public int getRecordsCount() {
@@ -176,14 +169,5 @@ public class ProductBasePage {
 			}
 		}
 		throw new NoSuchElementException("No record with id: " + prodId);
-	}
-	
-	private void hideNinjaBanner() {
-		try {
-			commonWait.until(ExpectedConditions.presenceOfElementLocated(hideNinjaButton))
-				.click();
-		} catch (NoSuchElementException e) {
-			// do nothing
-		}	
 	}
 }
