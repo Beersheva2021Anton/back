@@ -21,10 +21,11 @@ public class DiagnosticsTests {
 	private ProductBasePage productBasePage;	
 	private Logger LOG = LoggerFactory.getLogger(CrudOperationsTests.class);
 	
-	@BeforeTest
+	@BeforeMethod
 	public void setUp() {
 		WebDriverManager.chromedriver().setup();
 		driver = new ChromeDriver();
+		driver.manage().window().maximize();
 		driver.get(appUrl);
 		productBasePage = new ProductBasePage(driver);
 		productBasePage.acceptCookies();
@@ -39,18 +40,18 @@ public class DiagnosticsTests {
 	}
 	
 	@Test
-	public void updateNegativeQuantityTest() {
+	public void updateBigQuantityTest() {
 		Product newProduct = Utilities.getRandomProduct();
-		newProduct.setQuantity(-1);
-		LOG.info("Update product with negative quantity {}", newProduct);
+		newProduct.setQuantity(Utilities.MAX_QUANTITY + 1);
+		LOG.info("Update product with too big quantity {}", newProduct);
 		updateWithBadDataTest(newProduct);
 	}
 	
 	@Test
 	public void updateEmptyPriceTest() {
 		Product newProduct = Utilities.getRandomProduct();
-		newProduct.setPrice(null);
-		LOG.info("Update product with empty price {}", newProduct);
+		newProduct.setQuantity(null);
+		LOG.info("Update product with empty quantity {}", newProduct);
 		updateWithBadDataTest(newProduct);
 	}
 	
@@ -62,17 +63,31 @@ public class DiagnosticsTests {
 		updateWithBadDataTest(newProduct);
 	}
 	
+	@Test
+	public void updateNegativePriceTest() {
+		Product newProduct = Utilities.getRandomProduct();
+		newProduct.setPrice(-1d);
+		LOG.info("Update product with negative price {}", newProduct);
+		updateWithBadDataTest(newProduct);
+	}
+	
 	private void updateWithBadDataTest(Product newProduct) {
-		int recCount = productBasePage.getRecordsCount();
-		Product oldProduct = productBasePage.getProduct(recCount);
-		productBasePage.updateProduct(recCount, newProduct);
+		int prodId = addRandomProduct();
+		Product oldProduct = productBasePage.getProduct(prodId);
+		productBasePage.updateProduct(prodId, newProduct);
 		
 		productBasePage.closeAlertMessage();
-		Product actualProduct = productBasePage.getProduct(recCount);
+		Product actualProduct = productBasePage.getProduct(prodId);
 		assertEquals(actualProduct, oldProduct);
 	}
 	
-	@AfterTest
+	private int addRandomProduct() {
+		Product product = Utilities.getRandomProduct();		
+		LOG.info("Add new product {}", product);
+		return productBasePage.addProduct(product);
+	}
+	
+	@AfterMethod
 	public void tearDown() {
 		driver.quit();
 	}

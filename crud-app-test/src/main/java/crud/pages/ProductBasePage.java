@@ -24,21 +24,21 @@ public class ProductBasePage {
 	private By addNewRecordButton = By.id("ctl00_ContentPlaceholder1_RadGrid1_ctl00_ctl02_ctl00_AddNewRecordButton");
 	private By refreshButton = By.id("ctl00_ContentPlaceholder1_RadGrid1_ctl00_ctl02_ctl00_RefreshButton");
 	private By lastPageButton = By.cssSelector("button[class='t-button rgActionButton rgPageLast']");
-	private By recordsCounter = By.xpath(
-			"//*[@id=\"ctl00_ContentPlaceholder1_RadGrid1_ctl00\"]/tfoot/tr/td/div/div[5]/strong[1]");
+	private By recordsCounter = By.xpath("//div[@class='NextPrevAndNumeric']/div[5]/strong[1]");
 
 	private By prodNameEdit = By.xpath("//div[@class='rgEditForm']/table/tbody/tr[1]/td[2]/input");
 	private By prodQuantityEdit = By.xpath("//div[@class='rgEditForm']/table/tbody/tr[2]/td[2]/input");
 	private By prodPriceEdit = By.xpath("//div[@class='rgEditForm']/table/tbody/tr[3]/td[2]/input");
 	private By insertButton = By.xpath("//button[@class='t-button rgActionButton rgUpdate']");
 
-	private By delConfirmButton = By.xpath("/html/body/main/form/div[1]/div[2]/div/div[2]/button[1]");
-	private By alertConfirmButton = By.xpath("//div[@class='rwDialog rwAlertDialog']/div/button[1]");
+	private By delConfirmButton = By.xpath("//div[@class='rwDialog rwConfirmDialog']/div[2]/button[1]");
+	private By alertConfirmButton = By.xpath("//div[@class='rwDialog rwAlertDialog']/div[2]/button[1]");
 	
 	private By spinner = By.id(
 			"ctl00_ContentPlaceholder1_RadAjaxLoadingPanel1ctl00_ContentPlaceholder1_RadWindowManager1");
 
 	private By tableRow = By.xpath("//table[@class='rgMasterTable rfdOptionList']/tbody/tr");
+	private By hideNinjaButton = By.id("collapse-btn");
 	
 	public void acceptCookies() {
 		while (true) {
@@ -65,10 +65,14 @@ public class ProductBasePage {
 		nameEdit.sendKeys(product.getProdName());
 		WebElement quantityEdit = commonWait.until(ExpectedConditions.elementToBeClickable(prodQuantityEdit));
 		quantityEdit.clear();
-		quantityEdit.sendKeys(product.getQuantity().toString());
+		if (product.getQuantity() != null) {
+			quantityEdit.sendKeys(product.getQuantity().toString());
+		}		
 		WebElement priceEdit = commonWait.until(ExpectedConditions.elementToBeClickable(prodPriceEdit));
 		priceEdit.clear();
-		priceEdit.sendKeys(product.getPrice().toString());
+		if (product.getPrice() != null) {
+			priceEdit.sendKeys(product.getPrice().toString());
+		}		
 		commonWait.until(ExpectedConditions.elementToBeClickable(insertButton))
 			.click();
 		waitForTableActive();
@@ -86,6 +90,7 @@ public class ProductBasePage {
 	public void deleteProduct(int prodId) {
 		toLastPage();
 		String rowId = getRowIdByProdId(prodId);
+		hideNinjaBanner();
 		commonWait.until(ExpectedConditions.elementToBeClickable(By.xpath(
 				"//*[@id='" + rowId + "']/td[6]/button")))
 			.click();
@@ -103,7 +108,7 @@ public class ProductBasePage {
 			.getText();
 		String priceStr = commonWait.until(ExpectedConditions.presenceOfElementLocated(By.xpath(
 				"//*[@id='" + rowId + "']/td[5]")))
-			.getText().replace("$", "");
+			.getText().replaceAll("[(,$)]", "");
 		return new Product(nameStr, Integer.parseInt(quantityStr), Double.parseDouble(priceStr));
 	}
 	
@@ -124,19 +129,23 @@ public class ProductBasePage {
 	}
 
 	public void refreshPage() {
+		hideNinjaBanner();	
 		commonWait.until(ExpectedConditions.elementToBeClickable(refreshButton))
 			.click();
 		waitForTableActive();
 	}
 	
 	private void confirmDeletion() {
+		hideNinjaBanner();
 		commonWait.until(ExpectedConditions.elementToBeClickable(delConfirmButton))
 			.click();
 		waitForTableActive();
 	}
 	
 	public void closeAlertMessage() {
-		commonWait.until(ExpectedConditions.elementToBeClickable(alertConfirmButton));
+		hideNinjaBanner();
+		commonWait.until(ExpectedConditions.elementToBeClickable(alertConfirmButton))
+			.click();
 	}
 
 	public int getRecordsCount() {
@@ -167,5 +176,14 @@ public class ProductBasePage {
 			}
 		}
 		throw new NoSuchElementException("No record with id: " + prodId);
+	}
+	
+	private void hideNinjaBanner() {
+		try {
+			commonWait.until(ExpectedConditions.presenceOfElementLocated(hideNinjaButton))
+				.click();
+		} catch (NoSuchElementException e) {
+			// do nothing
+		}	
 	}
 }

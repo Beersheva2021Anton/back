@@ -19,10 +19,11 @@ public class CrudOperationsTests {
 	private ProductBasePage productBasePage;	
 	private Logger LOG = LoggerFactory.getLogger(CrudOperationsTests.class);
 	
-	@BeforeTest
+	@BeforeMethod
 	public void setUp() {
 		WebDriverManager.chromedriver().setup();
 		driver = new ChromeDriver();
+		driver.manage().window().maximize();
 		driver.get(appUrl);
 		productBasePage = new ProductBasePage(driver);
 		productBasePage.acceptCookies();
@@ -72,7 +73,7 @@ public class CrudOperationsTests {
 		return productBasePage.addProduct(product);
 	}
 	
-	@AfterTest
+	@AfterMethod
 	public void tearDown() {
 		driver.quit();
 	}
